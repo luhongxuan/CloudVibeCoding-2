@@ -1,0 +1,5 @@
+{
+  "name": "NeonPath 3D",
+  "description": "A 3D interactive neon maze generator and pathfinding algorithm visualizer. Explore how BFS, DFS, Dijkstra, and A* work in a glowing, immersive environment.",
+  "requestFramePermissions": []
+}
