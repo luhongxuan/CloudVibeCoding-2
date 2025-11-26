@@ -11,13 +11,13 @@ export const ANIMATION_SPEED_LEVELS = {
 
 export const COLORS = {
   WALL: "#020c0c", // Very deep dark teal/black
-  WALL_EMISSIVE: "#578e8e", // Deep dark teal glow (low intensity)
+  WALL_EMISSIVE: "#05b4b4", // Deep dark teal glow (low intensity)
   FLOOR: "#000000", // Pure black
   START: "#006400", // Dark Green
   END: "#640000", // Dark Red
   VISITED: "#c8e14c", // Deep Violet/Indigo (almost black/purple)
   FRONTIER: "#003366", // Dark Blue
-  PATH: "#b36b00", // Darkened Amber/Gold
+  PATH: "#a4af0e", // Darkened Amber/Gold
 };
 
 export const ALGORITHM_INFO: Record<AlgorithmType, { title: string; desc: string; complexity: string; properties: string }> = {
