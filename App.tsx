@@ -3,6 +3,7 @@ import Maze3D from './components/Maze3D';
 import Controls from './components/Controls';
 import { generateMaze } from './services/mazeGenerator';
 import { createAlgorithmGenerator } from './services/algorithms';
+import { generateMazeFromPrompt } from './services/aiMazeService';
 import { AlgorithmType, MazeState, AlgorithmStats, AnimationStep, Coordinate } from './types';
 import { MAZE_SIZE, ANIMATION_SPEED_LEVELS } from './constants';
 
@@ -12,6 +13,10 @@ const App: React.FC = () => {
   const [algorithm, setAlgorithm] = useState<AlgorithmType>(AlgorithmType.BFS);
   const [speed, setSpeed] = useState<number>(ANIMATION_SPEED_LEVELS.FAST);
   
+  // AI Generation State
+  const [aiPrompt, setAiPrompt] = useState<string>('');
+  const [isAiGenerating, setIsAiGenerating] = useState<boolean>(false);
+
   // Camera Modes
   const [isAutoCamera, setIsAutoCamera] = useState<boolean>(false); // Drone follow during generation
   const [isWalking, setIsWalking] = useState<boolean>(false); // FPS walkthrough after completion
@@ -43,17 +48,11 @@ const App: React.FC = () => {
 
   // --- Actions ---
 
-  const handleGenerateMaze = useCallback(() => {
-    // Reset running animation
+  const resetVisuals = useCallback(() => {
     if (timerRef.current) {
       window.clearTimeout(timerRef.current);
       timerRef.current = null;
     }
-
-    const newMaze = generateMaze(MAZE_SIZE, MAZE_SIZE);
-    setMaze(newMaze);
-    
-    // Reset visualization state
     setAnimationState({
       visited: new Set(),
       frontier: new Set(),
@@ -62,16 +61,36 @@ const App: React.FC = () => {
     });
     setFinalPath([]);
     setIsWalking(false);
-    
     setStats({
       visitedCount: 0,
       pathLength: 0,
       executionTime: 0,
       status: 'IDLE',
     });
-
     generatorRef.current = null;
   }, []);
+
+  const handleGenerateMaze = useCallback(() => {
+    resetVisuals();
+    const newMaze = generateMaze(MAZE_SIZE, MAZE_SIZE);
+    setMaze(newMaze);
+  }, [resetVisuals]);
+
+  const handleAiGenerate = useCallback(async () => {
+    if (!aiPrompt.trim()) return;
+    
+    resetVisuals();
+    setIsAiGenerating(true);
+    
+    try {
+      const newMaze = await generateMazeFromPrompt(aiPrompt);
+      setMaze(newMaze);
+    } catch (e) {
+      alert("Failed to generate maze. Please try again.");
+    } finally {
+      setIsAiGenerating(false);
+    }
+  }, [aiPrompt, resetVisuals]);
 
   const handleReset = useCallback(() => {
     if (timerRef.current) {
@@ -215,6 +234,10 @@ const App: React.FC = () => {
         setIsAutoCamera={setIsAutoCamera}
         onStartWalk={handleStartWalk}
         isWalking={isWalking}
+        aiPrompt={aiPrompt}
+        setAiPrompt={setAiPrompt}
+        onAiGenerate={handleAiGenerate}
+        isAiGenerating={isAiGenerating}
       />
 
       <div className="absolute bottom-4 right-4 text-gray-600 text-xs select-none pointer-events-none">

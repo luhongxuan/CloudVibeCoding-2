@@ -15,6 +15,12 @@ interface ControlsProps {
   setIsAutoCamera: (val: boolean) => void;
   onStartWalk: () => void;
   isWalking: boolean;
+  
+  // AI Props
+  aiPrompt: string;
+  setAiPrompt: (val: string) => void;
+  onAiGenerate: () => void;
+  isAiGenerating: boolean;
 }
 
 const Controls: React.FC<ControlsProps> = ({
@@ -29,15 +35,50 @@ const Controls: React.FC<ControlsProps> = ({
   isAutoCamera,
   setIsAutoCamera,
   onStartWalk,
-  isWalking
+  isWalking,
+  aiPrompt,
+  setAiPrompt,
+  onAiGenerate,
+  isAiGenerating
 }) => {
   return (
-    <div className="absolute top-4 left-4 z-10 w-80 flex flex-col gap-4">
+    <div className="absolute top-4 left-4 z-10 w-80 flex flex-col gap-4 max-h-[95vh] overflow-y-auto custom-scrollbar">
       {/* Main Control Panel */}
       <div className="bg-black/80 backdrop-blur-md border border-gray-800 p-6 rounded-xl shadow-2xl text-white">
         <h1 className="text-2xl font-bold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent mb-4">
           NeonPath 3D
         </h1>
+
+        {/* AI Generation Section */}
+        <div className="mb-6 p-3 bg-gray-900/50 rounded-lg border border-gray-700/50">
+          <label className="block text-xs font-semibold text-purple-400 uppercase tracking-wider mb-2">
+            AI Maze Generator
+          </label>
+          <div className="flex gap-2 mb-2">
+            <input 
+              type="text" 
+              value={aiPrompt}
+              onChange={(e) => setAiPrompt(e.target.value)}
+              placeholder="e.g. 'A heart shape', 'Zig zag'"
+              className="w-full bg-gray-950 border border-gray-700 text-xs text-white rounded p-2 outline-none focus:border-purple-500 transition-colors"
+            />
+          </div>
+          <button
+            onClick={onAiGenerate}
+            disabled={isAiGenerating || stats.status === 'RUNNING'}
+            className={`w-full py-1.5 rounded text-xs font-bold transition-all flex items-center justify-center ${
+              isAiGenerating 
+                ? 'bg-purple-900/50 text-purple-300 cursor-wait' 
+                : 'bg-purple-600 hover:bg-purple-500 text-white shadow-lg shadow-purple-900/20'
+            }`}
+          >
+            {isAiGenerating ? (
+              <><i className="fas fa-spinner fa-spin mr-2"></i> Generating...</>
+            ) : (
+              <><i className="fas fa-magic mr-2"></i> Generate with AI</>
+            )}
+          </button>
+        </div>
 
         {/* Algorithm Select */}
         <div className="mb-4">
@@ -82,15 +123,15 @@ const Controls: React.FC<ControlsProps> = ({
         <div className="grid grid-cols-2 gap-3 mb-4">
           <button
             onClick={onGenerate}
-            disabled={stats.status === 'RUNNING' || isWalking}
+            disabled={stats.status === 'RUNNING' || isWalking || isAiGenerating}
             className="col-span-2 bg-gray-800 hover:bg-gray-700 text-white py-2 rounded-lg font-semibold transition-colors border border-gray-600"
           >
-            <i className="fas fa-random mr-2"></i> New Maze
+            <i className="fas fa-random mr-2"></i> Random Maze
           </button>
           
           <button
             onClick={onRun}
-            disabled={stats.status === 'RUNNING' || stats.status === 'COMPLETED' || isWalking}
+            disabled={stats.status === 'RUNNING' || stats.status === 'COMPLETED' || isWalking || isAiGenerating}
             className={`py-3 rounded-lg font-bold shadow-lg transition-transform active:scale-95 flex items-center justify-center ${
               stats.status === 'RUNNING' ? 'bg-gray-600 cursor-not-allowed' : 'bg-cyan-600 hover:bg-cyan-500'
             }`}
