@@ -3,7 +3,7 @@ import Maze3D from './components/Maze3D';
 import Controls from './components/Controls';
 import { generateMaze } from './services/mazeGenerator';
 import { createAlgorithmGenerator } from './services/algorithms';
-import { AlgorithmType, MazeState, AlgorithmStats, AnimationStep } from './types';
+import { AlgorithmType, MazeState, AlgorithmStats, AnimationStep, Coordinate } from './types';
 import { MAZE_SIZE, ANIMATION_SPEED_LEVELS } from './constants';
 
 const App: React.FC = () => {
@@ -12,15 +12,22 @@ const App: React.FC = () => {
   const [algorithm, setAlgorithm] = useState<AlgorithmType>(AlgorithmType.BFS);
   const [speed, setSpeed] = useState<number>(ANIMATION_SPEED_LEVELS.FAST);
   
+  // Camera Modes
+  const [isAutoCamera, setIsAutoCamera] = useState<boolean>(false); // Drone follow during generation
+  const [isWalking, setIsWalking] = useState<boolean>(false); // FPS walkthrough after completion
+  const [finalPath, setFinalPath] = useState<Coordinate[]>([]); // Store ordered path for walkthrough
+
   // Animation/Vis State
   const [animationState, setAnimationState] = useState<{
     visited: Set<string>;
     frontier: Set<string>;
     path: Set<string>;
+    currentHead: Coordinate | null;
   }>({
     visited: new Set(),
     frontier: new Set(),
     path: new Set(),
+    currentHead: null,
   });
 
   const [stats, setStats] = useState<AlgorithmStats>({
@@ -51,7 +58,10 @@ const App: React.FC = () => {
       visited: new Set(),
       frontier: new Set(),
       path: new Set(),
+      currentHead: null,
     });
+    setFinalPath([]);
+    setIsWalking(false);
     
     setStats({
       visitedCount: 0,
@@ -72,7 +82,10 @@ const App: React.FC = () => {
       visited: new Set(),
       frontier: new Set(),
       path: new Set(),
+      currentHead: null,
     });
+    setFinalPath([]);
+    setIsWalking(false);
     setStats(prev => ({ ...prev, visitedCount: 0, pathLength: 0, status: 'IDLE' }));
     generatorRef.current = null;
   }, []);
@@ -87,26 +100,58 @@ const App: React.FC = () => {
     
     // Initialize generator
     generatorRef.current = createAlgorithmGenerator(algorithm, maze.grid, maze.start, maze.end);
+    let lastValue: AnimationStep | null = null;
 
     const step = () => {
       if (!generatorRef.current) return;
       
-      const startTime = performance.now();
       const { value, done } = generatorRef.current.next();
       
-      if (done || !value) {
-        setStats(prev => ({ ...prev, status: value?.path.length ? 'COMPLETED' : 'NO_PATH' }));
+      if (value) {
+        lastValue = value;
+      }
+      
+      // Handle completion
+      if (done) {
+        if (lastValue && lastValue.path.length > 0) {
+          // Filter adjacent duplicates to prevent degenerate segments that confuse lookAt
+          const rawPath = lastValue.path;
+          const cleanPath = rawPath.filter((node, i) => {
+             if (i === 0) return true;
+             const prev = rawPath[i-1];
+             return !(node.x === prev.x && node.y === prev.y);
+          });
+          
+          setFinalPath(cleanPath);
+          
+          // Ensure visual state is final
+          setAnimationState({
+             visited: new Set(lastValue.visited.map(c => `${c.x},${c.y}`)),
+             frontier: new Set(),
+             path: new Set(lastValue.path.map(c => `${c.x},${c.y}`)),
+             currentHead: null,
+          });
+
+          setStats(prev => ({ 
+            ...prev, 
+            status: 'COMPLETED',
+            visitedCount: lastValue!.visited.length,
+            pathLength: lastValue!.path.length
+          }));
+        } else {
+          setStats(prev => ({ ...prev, status: 'NO_PATH' }));
+        }
         return;
       }
 
+      if (!value) return;
+
       // Update Visualization State from Generator Output
-      // Optimization: For "Instant" speed, we might want to loop inside here multiple times, 
-      // but for simplicity, we just use 0ms timeout which is still bound by React render cycle.
-      
       setAnimationState({
         visited: new Set(value.visited.map(c => `${c.x},${c.y}`)),
         frontier: new Set(value.frontier.map(c => `${c.x},${c.y}`)),
         path: new Set(value.path.map(c => `${c.x},${c.y}`)),
+        currentHead: value.current || null,
       });
 
       setStats(prev => ({
@@ -117,7 +162,6 @@ const App: React.FC = () => {
 
       // Schedule next step
       if (speed === 0) {
-        // If instant, run loop faster or use minimal timeout
         timerRef.current = window.setTimeout(step, 0); 
       } else {
         timerRef.current = window.setTimeout(step, speed);
@@ -128,6 +172,10 @@ const App: React.FC = () => {
     step();
 
   }, [maze, algorithm, speed, handleReset]);
+
+  // Walkthrough Handlers
+  const handleStartWalk = useCallback(() => setIsWalking(true), []);
+  const handleStopWalk = useCallback(() => setIsWalking(false), []);
 
   // Initial load
   useEffect(() => {
@@ -148,6 +196,10 @@ const App: React.FC = () => {
       <Maze3D 
         maze={maze} 
         animationState={animationState}
+        isAutoCamera={isAutoCamera}
+        isWalking={isWalking}
+        finalPath={finalPath}
+        onWalkComplete={handleStopWalk}
       />
       
       <Controls 
@@ -159,9 +211,13 @@ const App: React.FC = () => {
         onRun={handleRun}
         onReset={handleReset}
         stats={stats}
+        isAutoCamera={isAutoCamera}
+        setIsAutoCamera={setIsAutoCamera}
+        onStartWalk={handleStartWalk}
+        isWalking={isWalking}
       />
 
-      <div className="absolute bottom-4 right-4 text-gray-600 text-xs select-none">
+      <div className="absolute bottom-4 right-4 text-gray-600 text-xs select-none pointer-events-none">
         <p>Left Click: Rotate | Right Click: Pan | Scroll: Zoom</p>
       </div>
     </div>

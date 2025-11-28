@@ -11,6 +11,10 @@ interface ControlsProps {
   onRun: () => void;
   onReset: () => void;
   stats: AlgorithmStats;
+  isAutoCamera: boolean;
+  setIsAutoCamera: (val: boolean) => void;
+  onStartWalk: () => void;
+  isWalking: boolean;
 }
 
 const Controls: React.FC<ControlsProps> = ({
@@ -21,7 +25,11 @@ const Controls: React.FC<ControlsProps> = ({
   onGenerate,
   onRun,
   onReset,
-  stats
+  stats,
+  isAutoCamera,
+  setIsAutoCamera,
+  onStartWalk,
+  isWalking
 }) => {
   return (
     <div className="absolute top-4 left-4 z-10 w-80 flex flex-col gap-4">
@@ -74,7 +82,7 @@ const Controls: React.FC<ControlsProps> = ({
         <div className="grid grid-cols-2 gap-3 mb-4">
           <button
             onClick={onGenerate}
-            disabled={stats.status === 'RUNNING'}
+            disabled={stats.status === 'RUNNING' || isWalking}
             className="col-span-2 bg-gray-800 hover:bg-gray-700 text-white py-2 rounded-lg font-semibold transition-colors border border-gray-600"
           >
             <i className="fas fa-random mr-2"></i> New Maze
@@ -82,7 +90,7 @@ const Controls: React.FC<ControlsProps> = ({
           
           <button
             onClick={onRun}
-            disabled={stats.status === 'RUNNING' || stats.status === 'COMPLETED'}
+            disabled={stats.status === 'RUNNING' || stats.status === 'COMPLETED' || isWalking}
             className={`py-3 rounded-lg font-bold shadow-lg transition-transform active:scale-95 flex items-center justify-center ${
               stats.status === 'RUNNING' ? 'bg-gray-600 cursor-not-allowed' : 'bg-cyan-600 hover:bg-cyan-500'
             }`}
@@ -92,11 +100,40 @@ const Controls: React.FC<ControlsProps> = ({
 
           <button
             onClick={onReset}
-            disabled={stats.status === 'RUNNING'}
+            disabled={stats.status === 'RUNNING' || isWalking}
              className="py-3 rounded-lg font-bold bg-gray-800 hover:bg-red-900/50 text-gray-300 border border-gray-700 transition-colors"
           >
             <i className="fas fa-undo"></i>
           </button>
+
+          {/* Camera Toggles */}
+          <div className="col-span-2 grid grid-cols-2 gap-3 mt-2">
+            {/* Generation Auto-Follow Toggle */}
+            <button
+                onClick={() => setIsAutoCamera(!isAutoCamera)}
+                disabled={isWalking}
+                className={`py-2 rounded-lg font-semibold transition-colors border flex items-center justify-center text-xs ${
+                    isAutoCamera ? 'bg-indigo-900/50 border-indigo-500 text-indigo-300' : 'bg-gray-800 border-gray-600 text-gray-400 hover:text-white'
+                }`}
+            >
+                {isAutoCamera ? 'Drone: ON' : 'Drone: OFF'}
+            </button>
+
+            {/* Path Walkthrough Button */}
+            <button
+                onClick={onStartWalk}
+                disabled={stats.status !== 'COMPLETED' || isWalking}
+                className={`py-2 rounded-lg font-bold transition-colors border flex items-center justify-center text-xs shadow-lg ${
+                    isWalking 
+                        ? 'bg-green-600/20 border-green-500 text-green-400 animate-pulse' 
+                        : stats.status === 'COMPLETED'
+                            ? 'bg-green-700 hover:bg-green-600 text-white border-green-600 cursor-pointer'
+                            : 'bg-gray-800 border-gray-600 text-gray-500 cursor-not-allowed'
+                }`}
+            >
+                <i className="fas fa-walking mr-2"></i> Walk
+            </button>
+          </div>
         </div>
 
         {/* Stats */}
